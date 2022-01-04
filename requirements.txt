@@ -2,7 +2,7 @@ certifi==2021.10.8
 click==8.0.3
 cmake==3.22.1
 cycler==0.11.0
-dlib==19.22.1
+# dlib==19.22.1
 Flask==2.0.2
 fonttools==4.28.5
 importlib-metadata==4.10.0
