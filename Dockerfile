@@ -4,6 +4,7 @@ FROM legosz/jojogan:v1
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Seoul
 ENV CUDA_HOME=/usr/local/cuda-11.1
+ENV PATH="/usr/local/cuda-11.1/bin:${PATH}"
 
 WORKDIR /app
 # COPY    . .
