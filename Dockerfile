@@ -10,6 +10,7 @@ WORKDIR /app
 # COPY    . .
 
 RUN apt-get update && apt-get install -y \
+  g++ \
   libgl1-mesa-glx \
   libglib2.0-0
 
