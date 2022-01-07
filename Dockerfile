@@ -2,9 +2,6 @@
 FROM legosz/jojogan:v1
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV CUDA_HOME="/usr/local/cuda-10.2"
-# ENV PATH="/usr/local/cuda-10.2/bin${PATH:+:${PATH}}"
-# ENV LD_LIBRARY_PATH="/usr/local/cuda-10.2/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 WORKDIR /app
 # COPY    . .
@@ -13,6 +10,10 @@ RUN apt-get update && apt-get install -y \
   build-essential \
   libgl1-mesa-glx \
   libglib2.0-0
+  
+ENV CUDA_HOME="/usr/local/cuda-10.2"
+ENV PATH="${CUDA_HOME}/bin${PATH:+:${PATH}}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-10.2/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 RUN pip3 install cmake
 RUN pip3 install dlib
