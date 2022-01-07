@@ -86,6 +86,9 @@ def jojogan():
     except:
         return Response("Empty Field", status=400)
     
+    if pretrained not in pretrained_models:
+      return Response("Model Not Found", status=404)
+    
     file.save(f'input/{file.filename}')
     result = generate(file.filename, pretrained)
     result = np.squeeze(result)
@@ -109,4 +112,4 @@ def main():
   return render_template('index.html')
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port="5000")
+    app.run(host="0.0.0.0", port="1234")
