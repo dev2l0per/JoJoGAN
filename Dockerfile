@@ -1,19 +1,15 @@
-# FROM    pytorch/pytorch:1.9.0-cuda11.1-cudnn8-runtime
+# FROM    pytorch/pytorch:1.9.0-cuda10.2-cudnn7-devel
 FROM legosz/jojogan:v1
 
 ARG DEBIAN_FRONTEND=noninteractive
+ENV CUDA_HOME="/usr/local/cuda-10.2"
 
 WORKDIR /app
 # COPY    . .
 
 RUN apt-get update && apt-get install -y \
-  build-essential \
   libgl1-mesa-glx \
   libglib2.0-0
-  
-ENV CUDA_HOME="/usr/local/cuda-10.2"
-ENV PATH="${CUDA_HOME}/bin${PATH:+:${PATH}}"
-ENV LD_LIBRARY_PATH="/usr/local/cuda-10.2/lib64:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
 RUN pip3 install cmake
 RUN pip3 install dlib
