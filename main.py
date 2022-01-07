@@ -1,5 +1,5 @@
 from flask import (
-    Flask, request, Response, send_file
+    Flask, request, Response, send_file, render_template
 )
 
 import torch
@@ -42,6 +42,7 @@ toPILImage = transforms.ToPILImage()
 
 pretrained_models = {
     "arcane_caitlyn": torch.load(os.path.join('models', 'arcane_caitlyn.pt'), map_location=lambda storage, loc: storage),
+    "arcane_caitlyn_preserve_color": torch.load(os.path.join('models', 'arcane_caitlyn_preserve_color.pt'), map_location=lambda storage, loc: storage),
     "arcane_jinx_preserve_color": torch.load(os.path.join('models', 'arcane_jinx_preserve_color.pt'), map_location=lambda storage, loc: storage),
     "arcane_jinx": torch.load(os.path.join('models', 'arcane_jinx.pt'), map_location=lambda storage, loc: storage),
     "arcane_multi_preserve_color": torch.load(os.path.join('models', 'arcane_multi_preserve_color.pt'), map_location=lambda storage, loc: storage),
@@ -58,16 +59,13 @@ pretrained_models = {
 }
 
 
-def generate(filename, pretrained, preserve_color):
+def generate(filename, pretrained):
     filepath = f'input/{filename}'
     name = strip_path_extension(filepath)+'.pt'
     aligned_face = align_face(filepath)
     my_w = e4e_projection(aligned_face, name, device).unsqueeze(0)
 
-    if preserve_color:
-        ckpt = pretrained_models[f'{pretrained}_preserve_color']
-    else:
-        ckpt = pretrained_models[pretrained]
+    ckpt = pretrained_models[pretrained]
 
     generator.load_state_dict(ckpt["g"], strict=False)
     seed = 3000
@@ -85,13 +83,11 @@ def jojogan():
     try:
         file = request.files['file']
         pretrained = request.form['pretrained']
-        preserve_color = request.form['preserve_color']
     except:
         return Response("Empty Field", status=400)
     
-    preserve_color = bool(strtobool(preserve_color))
     file.save(f'input/{file.filename}')
-    result = generate(file.filename, pretrained, preserve_color)
+    result = generate(file.filename, pretrained)
     result = np.squeeze(result)
     result_image = toPILImage(result)
     buffer_out = BytesIO()
@@ -107,6 +103,10 @@ def jojogan():
 @app.route('/health', methods=['GET'])
 def health_check():
     return "ok"
+
+@app.route('/', methods=['GET'])
+def main():
+  return render_template('index.html')
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port="5000")
