@@ -162,7 +162,7 @@ def align_face(filepath, output_size=1024, transform_size=4096, enable_padding=T
     qsize = np.hypot(*x) * 2
 
     # read image
-    img = Image.open(filepath)
+    img = Image.open(filepath).convert('RGB')
 
     transform_size = output_size
     enable_padding = True
