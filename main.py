@@ -1,3 +1,5 @@
+from queue import Empty, Queue
+import threading
 from flask import (
     Flask, request, Response, send_file, render_template
 )
@@ -9,6 +11,7 @@ from util import *
 import os
 import glob
 import copy
+import time
 from io import BytesIO
 
 from distutils.util import strtobool
@@ -58,25 +61,54 @@ pretrained_models = {
     "supergirl": torch.load(os.path.join('models', 'supergirl.pt'), map_location=lambda storage, loc: storage),
 }
 
+requestsQueue = Queue()
+BATCH_SIZE = 1
+CHECK_INTERVAL = 0.1
 
-def generate(filename, pretrained):
-    filepath = f'input/{filename}'
-    name = strip_path_extension(filepath)+'.pt'
-    aligned_face = align_face(filepath)
-    my_w = e4e_projection(aligned_face, name, device).unsqueeze(0)
+def handle_requests_by_batch():
+  while True:
+    requestsBatch = []
+    while not (len(requestsBatch) >= BATCH_SIZE):
+      try:
+        requestsBatch.append(requestsQueue.get(timeout=CHECK_INTERVAL))
+      except Empty:
+        continue
+      for request in requestsBatch:
+        request['output'] = run(request['input'][0], request['input'][1])
 
-    ckpt = pretrained_models[pretrained]
+def run(file, pretrained):
+    try:
+      filepath = f'input/{file.filename}'
+      file.save(filepath)
+      name = strip_path_extension(filepath)+'.pt'
+      aligned_face = align_face(filepath)
+      my_w = e4e_projection(aligned_face, name, device).unsqueeze(0)
 
-    generator.load_state_dict(ckpt["g"], strict=False)
-    seed = 3000
+      ckpt = pretrained_models[pretrained]
 
-    torch.manual_seed(seed)
-    with torch.no_grad():
-        generator.eval()
-        my_sample = generator(my_w, input_is_latent=True)
+      generator.load_state_dict(ckpt["g"], strict=False)
+      seed = 3000
 
-    return utils.make_grid(my_sample, normalize=True, range=(-1, 1))
+      torch.manual_seed(seed)
+      with torch.no_grad():
+          generator.eval()
+          my_sample = generator(my_w, input_is_latent=True)
 
+      result = utils.make_grid(my_sample, normalize=True, range=(-1, 1))
+      result = np.squeeze(result)
+      result_image = toPILImage(result)
+      buffer_out = BytesIO()
+      result_image.save(buffer_out, format=f'{file.content_type.split("/")[-1]}')
+      buffer_out.seek(0)
+
+      deleteFileList = glob.glob(f"input/{file.filename.split('.')[0]}.*")
+      for deleteFile in deleteFileList:
+          os.remove(deleteFile)
+      return buffer_out
+    except Exception as e:
+      return "error"
+
+threading.Thread(target=handle_requests_by_batch).start()
 
 @app.route('/jojogan', methods=['POST'])
 def jojogan():
@@ -89,19 +121,20 @@ def jojogan():
     if pretrained not in pretrained_models:
       return Response("Model Not Found", status=404)
     
-    file.save(f'input/{file.filename}')
-    result = generate(file.filename, pretrained)
-    result = np.squeeze(result)
-    result_image = toPILImage(result)
-    buffer_out = BytesIO()
-    result_image.save(buffer_out, format=f'{file.content_type.split("/")[-1]}')
-    buffer_out.seek(0)
+    req = {
+      'input': [file, pretrained]
+    }
 
-    deleteFileList = glob.glob(f"input/{file.filename.split('.')[0]}.*")
-    for deleteFile in deleteFileList:
-        os.remove(deleteFile)
+    requestsQueue.put(req)
 
-    return send_file(buffer_out, mimetype=file.content_type)
+    while 'output' not in req:
+      time.sleep(CHECK_INTERVAL)
+    
+    io = req['output']
+    if io == "error":
+      return Response('Server Error', status=500)
+
+    return send_file(io, mimetype=file.content_type)
 
 @app.route('/health', methods=['GET'])
 def health_check():
