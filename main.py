@@ -112,6 +112,9 @@ threading.Thread(target=handle_requests_by_batch).start()
 
 @app.route('/jojogan', methods=['POST'])
 def jojogan():
+    if requestsQueue.qsize() > BATCH_SIZE:
+      return Response('Too Many Requests', status=429)
+
     try:
         file = request.files['file']
         pretrained = request.form['pretrained']
