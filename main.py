@@ -105,6 +105,8 @@ def run(file, pretrained):
       for deleteFile in deleteFileList:
           os.remove(deleteFile)
       return buffer_out
+    except AssertionError as e:
+      return "Detected Error"
     except Exception as e:
       return "error"
 
@@ -136,6 +138,8 @@ def jojogan():
     io = req['output']
     if io == "error":
       return Response('Server Error', status=500)
+    elif io == "Detected Error":
+      return Response('Face Not Deteced, try another face image', status=500)
 
     return send_file(io, mimetype=file.content_type)
 
